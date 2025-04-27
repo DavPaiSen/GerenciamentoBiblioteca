@@ -3,16 +3,35 @@ import Tipos
 import Funcoes
 import System.IO (hSetBuffering, BufferMode(NoBuffering), stdout)
 
+lerString :: String -> IO String
+lerString s = do
+    putStr s
+    entrada <- getLine
+    if null entrada
+        then do
+            putStrLn "Não pode ser vazio!"
+            lerString s
+        else
+            return entrada
+
+lerAno :: IO Int
+lerAno = do
+    entrada <- lerString "Ano de lançamento: "
+    case stringPraInt entrada of
+        Just ano -> return ano
+        Nothing -> do
+            putStrLn "Fudeu!"
+            lerAno
+
+
 criaLivro :: [Livro] -> IO Livro
 criaLivro listaLivros = do
-    putStr "Título: "
-    titulo <- getLine
+    titulo <- lerString "Título: "
 
-    putStr "Autor: "
-    autor <- getLine
+    autor <- lerString "Autor: "
 
-    putStr "Ano de lançamento: "
-    ano <- getLine
+    ano <- lerAno
+
 
     let id = novoId listaLivros
 
@@ -21,7 +40,7 @@ criaLivro listaLivros = do
         titulo = titulo,
         idLivro = id,
         autor = autor,
-        ano = ano, --precisa transformar de string pra int
+        ano = ano,
         listaDeEspera = []
     }
 
