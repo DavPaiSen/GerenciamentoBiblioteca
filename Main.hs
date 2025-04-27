@@ -23,7 +23,6 @@ lerAno = do
             putStrLn "Fudeu!"
             lerAno
 
-
 criaLivro :: [Livro] -> IO Livro
 criaLivro listaLivros = do
     titulo <- lerString "Título: "
@@ -31,7 +30,6 @@ criaLivro listaLivros = do
     autor <- lerString "Autor: "
 
     ano <- lerAno
-
 
     let id = novoId listaLivros
 
