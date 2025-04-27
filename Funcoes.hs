@@ -2,7 +2,8 @@ module Funcoes (
     livrosDisponiveis,
     livrosIndisponiveis,
     marcarDisponibilidade,
-    novoId
+    novoId,
+    stringPraInt
 ) where
 import Tipos
 import Exemplos
@@ -12,6 +13,17 @@ recursaoGenerica _ [] = []
 recursaoGenerica condicao (x:xs)
     |condicao x = x : recursaoGenerica condicao xs
     |otherwise = recursaoGenerica condicao xs
+
+stringPraInt :: String -> Maybe Int
+stringPraInt s
+    |and $ map (\d -> d >= '9' && d >= '0') s = Nothing
+    |otherwise = Just $ stringPraInt' s 0
+        where
+            stringPraInt' :: String -> Int -> Int
+            stringPraInt' [] acc = acc
+            stringPraInt' (x:xs) acc = stringPraInt' xs somou
+                where
+                    somou = 10 * acc + (fromEnum x - fromEnum '0')
 
 --emprestimo e devolução
 livrosDisponiveis :: [Livro] -> [Livro]
