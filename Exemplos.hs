@@ -6,7 +6,8 @@ import Tipos
 biblioteca :: [Livro]
 biblioteca =
     [ Livro
-        { disponivel = True
+        { nTotal = 1
+        , nDisponiveis = 1
         , titulo = "Assim falava Zaratustra"
         , idLivro = 0
         , autor = "Nietzsche"
@@ -14,7 +15,8 @@ biblioteca =
         , listaDeEspera = []
         }
     , Livro
-        { disponivel = True 
+        { nTotal = 1 
+        , nDisponiveis = 1
         , titulo = "Ensaio sobre a segueira"
         , idLivro = 1
         , autor = "José Saramago"
@@ -22,7 +24,8 @@ biblioteca =
         , listaDeEspera = []
         }
     , Livro
-        { disponivel = True
+        { nTotal = 1
+        , nDisponiveis = 1
         , titulo = "Senhor das moscas"
         , idLivro = 2
         , autor = "William Golding"
@@ -30,7 +33,8 @@ biblioteca =
         , listaDeEspera = []
         }
     , Livro
-        { disponivel = False
+        { nTotal = 1
+        , nDisponiveis = 0
         , titulo = "A peste"
         , idLivro = 3
         , autor = "Albert Camus"
