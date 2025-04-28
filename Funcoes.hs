@@ -27,20 +27,17 @@ stringPraInt s
 
 --emprestimo e devolução
 livrosDisponiveis :: [Livro] -> [Livro]
-livrosDisponiveis listaLivros = recursaoGenerica (\l -> disponivel l) listaLivros
+livrosDisponiveis listaLivros = recursaoGenerica (\l -> nDisponiveis l > 0) listaLivros
 
 livrosIndisponiveis :: [Livro] -> [Livro]
-livrosIndisponiveis listaLivros = recursaoGenerica (\l -> not $ disponivel l) listaLivros
+livrosIndisponiveis listaLivros = recursaoGenerica (\l -> nDisponiveis l == 0) listaLivros
 
---transforma a disponibilidade do livro pelo id
-marcarDisponibilidade :: Bool -> Int -> [Livro] -> Maybe [Livro]
-marcarDisponibilidade _ _ [] = Nothing
+--soma a disponibilidade do livro pelo id, assume que o livro está na lista!!!
+marcarDisponibilidade :: Int -> Int -> [Livro] -> [Livro]
+marcarDisponibilidade _ _ [] = []
 marcarDisponibilidade mudanca id (x:xs)
-    |idLivro x == id = Just (x {disponivel = mudanca} : xs)
-    |otherwise =
-            case marcarDisponibilidade mudanca id xs of
-                Nothing -> Nothing
-                Just lista -> Just (x:lista)
+    |idLivro x == id = (x {nDisponiveis = nDisponiveis x + mudanca} : xs)
+    |otherwise = x : marcarDisponibilidade mudanca id xs 
 
 novoId :: [Livro] -> Int
 novoId listaLivros =
