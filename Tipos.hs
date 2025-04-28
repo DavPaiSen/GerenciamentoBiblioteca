@@ -3,6 +3,8 @@ module Tipos (
     Livro(..)
 ) where
 
+-- Como que vai representar o emprestimo como tipo algébrico???
+
 data Usuario = Usuario 
     { nome :: String
     , matricula :: String
@@ -11,7 +13,8 @@ data Usuario = Usuario
     } deriving (Show, Eq)
 
 data Livro = Livro 
-    { disponivel :: Bool
+    { nTotal :: Int
+    , nDisponiveis :: Int
     , titulo :: String
     , idLivro :: Int
     , autor :: String
