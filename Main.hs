@@ -46,6 +46,36 @@ criaLivro listaLivros = do
         listaDeEspera = []
     }
 
+--função para receber os dados do livro
+adicionarLivro :: [Livro] -> IO [Livro]
+adicionarLivro biblioteca = do
+    novo <- criaLivro biblioteca
+    return (novo : biblioteca)
+
+-- função para adicionar novo usuario
+adicionarUsuario :: [Usuario] -> IO (Either String [Usuario])
+adicionarUsuario usuarios = do
+    nome <- lerString "Nome: "
+    mat <- lerString "Matrícula: "
+    eml <- lerString "Email: "
+    
+    case validarMatricula mat usuarios of
+        Left err -> return $ Left err
+        Right matValida -> case validarEmail eml of
+            Left err -> return $ Left err
+            Right emlValido -> 
+                let novoUsuario = Usuario nome matValida emlValido []
+                in return $ Right (novoUsuario : usuarios)
+
+-- sistema unificado para tratamento de erro para todas as operações
+tratarErro :: Either String a -> (a -> IO ()) -> IO ()
+tratarErro resultado ação = 
+    case resultado of
+        Left err -> putStrLn $ "Erro: " ++ err
+        Right val -> ação val
+
+
+-- função main (completar)
 main :: IO()
 main = do
     hSetBuffering stdout NoBuffering
