@@ -15,6 +15,7 @@ recursaoGenerica condicao (x:xs)
     |condicao x = x : recursaoGenerica condicao xs
     |otherwise = recursaoGenerica condicao xs
 
+--conversao de string pra int, retorna Nothing se nao conseguir
 stringPraInt :: String -> Maybe Int
 stringPraInt s
     |and $ map (\d -> d >= '9' && d >= '0') s = Nothing
@@ -40,6 +41,7 @@ marcarDisponibilidade mudanca id (x:xs)
     |idLivro x == id = (x {nDisponiveis = nDisponiveis x + mudanca} : xs)
     |otherwise = x : marcarDisponibilidade mudanca id xs 
 
+--autoexplicativo
 novoId :: [Livro] -> Int
 novoId listaLivros =
     if null listaLivros
@@ -49,12 +51,13 @@ novoId listaLivros =
 
 -- função que remove livros filtrando por id
 removerLivro :: Int -> [Livro] -> Either String [Livro]
-removerLivro idLivro [] = Left "Livro não encontrado"
-removerLivro idLivro (x:xs)
-    | idLivro == idLivro x = Right xs
-    | otherwise = case removerLivro idLivro xs of
+removerLivro id [] = Left "Livro não encontrado"
+removerLivro id (x:xs)                                      --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+    | id == idLivro x = Right xs
+    | otherwise = case removerLivro id xs of
                     Right rest -> Right (x:rest)
                     Left err -> Left err
+
 
 -- função para formatação dos dados
 listarLivros :: [Livro] -> [String]
@@ -66,8 +69,8 @@ listarLivros = map formatarLivro
 
 -- edita um livro usando splitAt para localizar o elemento
 editarLivro :: Int -> (Livro -> Livro) -> [Livro] -> Either String [Livro]
-editarLivro idLivro f livros = 
-    case break (\l -> idLivro l == idLivro) livros of
+editarLivro id f livros = 
+    case break (\l -> idLivro l == id) livros of                            --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
         (_, []) -> Left "Livro não encontrado"
         (prefix, (x:xs)) -> Right (prefix ++ [f x] ++ xs)
 
@@ -107,14 +110,17 @@ validarRemocaoUsuario usuario
 
 -- função para atualizar listas de espera apos edição de usuarios
 atualizarListaEspera :: Int -> [Usuario] -> [Livro] -> [Livro]
-atualizarListaEspera idLivro usuarios livros = 
-    map (\livro -> if idLivro livro == idLivro 
-                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) }
+atualizarListaEspera id usuarios livros = 
+    map (\livro -> if idLivro livro == id 
+                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
                    else livro) livros
 
+--salva a lista de livros em um txt no caminho dado
+salvarEmArquivo :: FilePath -> [Livro] -> IO ()
+salvarEmArquivo caminho livros = writeFile caminho (show livros)
 
-
-
-
-
-
+--le um arquivo txt e devolve uma lista de livros
+carregarDeArquivo :: FilePath -> IO [Livro]
+carregarDeArquivo caminho = do
+    conteudo <- readFile caminho
+    return (read conteudo :: [Livro])
