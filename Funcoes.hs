@@ -14,11 +14,17 @@ module Funcoes (
     validarMatricula,
     editarLivro,
     listarLivros,
-    removerLivro
+    removerLivro,
+    registrarEmprestimo,
+    registrarDevolucao,
+    listarLivrosEmprestados,
+    listarUsuariosComAtraso,
+    listarListaEsperaPorLivro,
 ) where
 import Tipos
 import Exemplos
-import Data.List (splitAt)
+import Data.List (splitAt,find, elem, delete)
+import Data.Maybe (isJust, fromMaybe)
 
 recursaoGenerica :: (Livro -> Bool) -> [Livro] -> [Livro]
 recursaoGenerica _ [] = []
@@ -135,3 +141,189 @@ carregarDeArquivo :: FilePath -> IO [Livro]
 carregarDeArquivo caminho = do
     conteudo <- readFile caminho
     return (read conteudo :: [Livro])
+
+-- Constante para prazo de empréstimo
+prazoEmprestimoDias :: Integer
+prazoEmprestimoDias = 14
+
+{-
+Registra o empréstimo de um livro para um usuário.
+	Verifica se há exemplares disponíveis.
+	Se houver:
+		Registra o empréstimo.(atualiza livrosEmprestados.txt)
+		Diminui o número de exemplares disponíveis.
+	Se não houver:
+		Pergunta ao usuário se deseja entrar na lista de espera.
+			Se sim, adiciona à listaEspera.txt
+-}
+registrarEmprestimo :: Int -> String -> [Livro] -> [Usuario] -> IO ([Livro], [Usuario])
+registrarEmprestimo idLivroEmpr matUsuario livros usuarios = do
+    hoje <- utctDay <$> getCurrentTime
+    let dataDevolucao = addDays prazoEmprestimoDias hoje -- Calcula data de devolução
+
+    case findLivro idLivroEmpr livros of
+        Nothing -> do
+            putStrLn $ "Erro: Livro com ID " ++ show idLivroEmpr ++ " não encontrado."
+            return (livros, usuarios)
+        Just livro ->
+            case findUsuario matUsuario usuarios of
+                Nothing -> do
+                    putStrLn $ "Erro: Usuário com matrícula " ++ matUsuario ++ " não encontrado."
+                    return (livros, usuarios)
+                Just usuario ->
+                    -- Verifica se usuário JÁ TEM este livro
+                    if any (\(id, _) -> id == idLivroEmpr) (livrosEmprestados usuario)
+                    then do
+                        putStrLn "Erro: Usuário já está com este livro emprestado."
+                        return (livros, usuarios)
+                    else -- Verifica disponibilidade
+                        if nDisponiveis livro > 0
+                        then do
+                            let livroAtualizado = livro { nDisponiveis = nDisponiveis livro - 1 }
+                                usuarioAtualizado = usuario { livrosEmprestados = (idLivroEmpr, dataDevolucao) : livrosEmprestados usuario } -- Adiciona tupla
+                                novosLivros = updateLivro livroAtualizado livros
+                                novosUsuarios = updateUsuario usuarioAtualizado usuarios
+                            putStrLn $ "Empréstimo do livro '" ++ titulo livro ++ "' (ID: " ++ show idLivroEmpr ++ ") registrado para " ++ matUsuario
+                            putStrLn $ "Devolver até: " ++ show dataDevolucao
+                            return (novosLivros, novosUsuarios)
+                        else do -- Livro indisponível -> Lista de espera
+                            putStrLn $ "Livro '" ++ titulo livro ++ "' indisponível."
+                            if matUsuario `elem` listaDeEspera livro
+                            then do
+                                putStrLn "Usuário já está na lista de espera."
+                                return (livros, usuarios)
+                            else do
+                                putStr "Deseja entrar na lista de espera? (S/N): "
+                                resposta <- getLine
+                                if resposta `elem` ["S", "s"]
+                                then do
+                                    let livroComEspera = livro { listaDeEspera = listaDeEspera livro ++ [matUsuario] }
+                                        novosLivros = updateLivro livroComEspera livros
+                                    putStrLn "Usuário adicionado à lista de espera."
+                                    return (novosLivros, usuarios)
+                                else do
+                                    putStrLn "Usuário não adicionado à lista de espera."
+                                    return (livros, usuarios)
+
+{-
+Processa a devolução de um livro por um usuário.
+Remove o registro de empréstimo do usuário.
+Verifica se há alguém na lista de espera para o livro:
+	Se houver: entrega o livro ao próximo da fila automaticamente.
+	Se não: aumenta o número de exemplares disponíveis do livro.
+-}
+registrarDevolucao :: Int -> String -> [Livro] -> [Usuario] -> IO ([Livro], [Usuario])
+registrarDevolucao idLivroDev matUsuarioDevolvendo livros usuarios = do
+    hoje <- utctDay <$> getCurrentTime
+    case findUsuario matUsuarioDevolvendo usuarios of
+        Nothing -> do
+            putStrLn $ "Erro: Usuário " ++ matUsuarioDevolvendo ++ " não encontrado."
+            return (livros, usuarios)
+        Just usuarioDevolvendo ->
+            if not (any (\(id, _) -> id == idLivroDev) (livrosEmprestados usuarioDevolvendo))
+            then do
+                putStrLn $ "Erro: Usuário " ++ matUsuarioDevolvendo ++ " não está com o livro ID " ++ show idLivroDev ++ "."
+                return (livros, usuarios)
+            else
+                case findLivro idLivroDev livros of
+                    Nothing -> do
+                        putStrLn $ "Erro Crítico: Livro ID " ++ show idLivroDev ++ " (emprestado) não encontrado na lista de livros!"
+                        return (livros, usuarios)
+                    Just livroDevolvido -> do
+                        putStrLn $ "Processando devolução do livro '" ++ titulo livroDevolvido ++ "' por " ++ matUsuarioDevolvendo ++ "."
+                        -- 1. Remover livro do usuário
+                        let emprestimosAtualizados = filter (\(id, _) -> id /= idLivroDev) (livrosEmprestados usuarioDevolvendo)
+                            usuarioSemLivro = usuarioDevolvendo { livrosEmprestados = emprestimosAtualizados }
+                            usuariosTemp = updateUsuario usuarioSemLivro usuarios
+                        -- 2. Verificar lista de espera
+                        case listaDeEspera livroDevolvido of
+                            [] -> do --Sem fila
+                                putStrLn "Ninguém na lista de espera. Livro agora disponível."
+                                let livroDisponivel = livroDevolvido { nDisponiveis = nDisponiveis livroDevolvido + 1 }
+                                    livrosFinais = updateLivro livroDisponivel livros
+                                return (livrosFinais, usuariosTemp)
+
+                            (matProximo : restoFila) -> do -- fila
+                                putStrLn $ "Usuário " ++ matProximo ++ " é o próximo da lista de espera."
+                                case findUsuario matProximo usuariosTemp of
+                                    Nothing -> do
+                                        -- usuário na fila não existe
+                                        putStrLn $ "Erro: Usuário da fila " ++ matProximo ++ " não encontrado. Removendo da fila."
+                                        let livroFilaCorrigida = livroDevolvido { listaDeEspera = restoFila, nDisponiveis = nDisponiveis livroDevolvido + 1 }
+                                        let livrosFinais = updateLivro livroFilaCorrigida livros
+                                        return (livrosFinais, usuariosTemp)
+                                    Just usuarioProximo -> do
+                                        --remover próximo da fila
+                                        let livroFilaAtualizada = livroDevolvido { listaDeEspera = restoFila }
+                                            livrosTemp = updateLivro livroFilaAtualizada livros
+                                        --nova data de devolução
+                                        let novaDataDevolucao = addDays prazoEmprestimoDias hoje
+                                        --adicionar livro emprestado
+                                        let usuarioProximoComLivro = usuarioProximo { livrosEmprestados = (idLivroDev, novaDataDevolucao) : livrosEmprestados usuarioProximo }
+                                            usuariosFinais = updateUsuario usuarioProximoComLivro usuariosTemp
+                                        putStrLn $ "Livro emprestado automaticamente para " ++ matProximo ++ "."
+                                        putStrLn $ "Devolver até: " ++ show novaDataDevolucao
+                                        return (livrosTemp, usuariosFinais)
+
+{-
+Gera um relatório dos livros que estão atualmente emprestados.
+Lê o arquivo livrosEmprestados.txt
+Mostra cada livro emprestado com o nome do usuário correspondente.
+-}
+listarLivrosEmprestados :: [Livro] -> [Usuario] -> IO ()
+listarLivrosEmprestados livros usuarios = do
+    putStrLn "\n--- Livros Emprestados Atualmente ---"
+    let todosEmprestimos = concatMap (\u -> map (\(idL, dataD) -> (idL, dataD, u)) (livrosEmprestados u)) usuarios
+    if null todosEmprestimos
+    then putStrLn "Nenhum livro emprestado no momento."
+    else mapM_ imprimirEmprestimo todosEmprestimos
+    where
+        imprimirEmprestimo (idLivroEmpr, dataDev, usuario) =
+            case findLivro idLivroEmpr livros of
+                Nothing -> putStrLn $ "! Erro: Livro ID " ++ show idLivroEmpr ++ " (emprestado por " ++ matricula usuario ++ ") não encontrado na base!"
+                Just livro -> putStrLn $ "ID: " ++ show idLivroEmpr ++ " | Livro: '" ++ titulo livro ++
+                                        "' | Usuário: " ++ nome usuario ++ " (Mat: " ++ matricula usuario ++ ")" ++
+                                        " | Devolução: " ++ show dataDev
+
+{-
+Lista usuários com livros em atraso
+-}
+listarUsuariosComAtraso :: [Livro] -> [Usuario] -> IO ()
+listarUsuariosComAtraso livros usuarios = do
+    hoje <- utctDay <$> getCurrentTime
+    putStrLn $ "\n--- Usuários com Livros em Atraso (Data Atual: " ++ show hoje ++ ") ---"
+    let emprestimosAtrasados = filter (\(_, dataDev, _) -> dataDev < hoje) $
+                               concatMap (\u -> map (\(idL, dataD) -> (idL, dataD, u)) (livrosEmprestados u)) usuarios
+
+    if null emprestimosAtrasados
+    then putStrLn "Nenhum usuário com livros em atraso."
+    else mapM_ (imprimirAtraso hoje) emprestimosAtrasados
+    where
+        imprimirAtraso :: Day -> (Int, Day, Usuario) -> IO ()
+        imprimirAtraso hoje (idLivroAtr, dataDev, usuario) =
+             case findLivro idLivroAtr livros of
+                Nothing -> putStrLn $ "! Erro: Livro ID " ++ show idLivroAtr ++ " (atrasado com " ++ matricula usuario ++ ") não encontrado!"
+                Just livro -> do
+                    let diasAtraso = diffDays hoje dataDev
+                    putStrLn $ "Usuário: " ++ nome usuario ++ " (Mat: " ++ matricula usuario ++ ")" ++
+                               " | Livro: '" ++ titulo livro ++ "' (ID: " ++ show idLivroAtr ++ ")" ++
+                               " | Devolução Prevista: " ++ show dataDev ++
+                               " | Dias em Atraso: " ++ show diasAtraso
+
+{-
+Mostra a lista de espera organizada por livro.
+Agrupa os nomes dos usuários na listaEspera.txt por título
+Exibe os livros e a ordem dos usuários que aguardam cada um.
+-}
+listarListaEsperaPorLivro :: [Livro] -> IO ()
+listarListaEsperaPorLivro livros = do
+    putStrLn "\n--- Listas de Espera por Livro ---"
+    let livrosComEspera = filter (not . null . listaDeEspera) livros
+    if null livrosComEspera
+    then putStrLn "Nenhuma lista de espera ativa."
+    else mapM_ imprimirLista livrosComEspera
+    where
+        imprimirLista livro = do
+            putStrLn $ "Livro: '" ++ titulo livro ++ "' (ID: " ++ show (idLivro livro) ++ ")"
+            putStrLn "  Usuários na fila (Matrícula):"
+            mapM_ (\mat -> putStrLn $ "  - " ++ mat) (listaDeEspera livro)
