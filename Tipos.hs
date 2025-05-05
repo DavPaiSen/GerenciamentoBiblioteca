@@ -4,11 +4,13 @@ module Tipos (
     Emprestimo(..)
 ) where
 
+import Data.Time.Calendar (Day)
+
 data Usuario = Usuario 
     { nome :: String
     , matricula :: String
     , email :: String
-    , livrosEmprestados :: [Int]
+    , livrosEmprestados :: [(Int, Day)]
     } deriving (Show, Eq, Read)
 
 data Livro = Livro 
