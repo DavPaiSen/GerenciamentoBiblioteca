@@ -19,7 +19,7 @@ module Funcoes (
     registrarDevolucao,
     listarLivrosEmprestados,
     listarUsuariosComAtraso,
-    listarListaEsperaPorLivro,
+    listarListaEsperaPorLivro
 ) where
 import Tipos
 import Exemplos
