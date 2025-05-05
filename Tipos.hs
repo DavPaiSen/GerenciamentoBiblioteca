@@ -1,16 +1,15 @@
 module Tipos (
     Usuario(..),
-    Livro(..)
+    Livro(..),
+    Emprestimo(..)
 ) where
-
--- Como que vai representar o emprestimo como tipo algébrico???
 
 data Usuario = Usuario 
     { nome :: String
     , matricula :: String
     , email :: String
     , livrosEmprestados :: [Int]
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Read)
 
 data Livro = Livro 
     { nTotal :: Int
@@ -19,5 +18,11 @@ data Livro = Livro
     , idLivro :: Int
     , autor :: String
     , ano :: Int
-    , listaDeEspera :: [String]
-    } deriving (Show, Eq)
+    , listaDeEspera :: [Usuario]
+    } deriving (Show, Eq, Read)
+
+data Emprestimo = Emprestimo
+    { ativo :: Bool
+    , usuario :: Usuario
+    , livro :: Livro
+    } deriving (Show, Eq, Read)
