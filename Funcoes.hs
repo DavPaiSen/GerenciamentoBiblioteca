@@ -3,7 +3,18 @@ module Funcoes (
     livrosIndisponiveis,
     marcarDisponibilidade,
     novoId,
-    stringPraInt
+    stringPraInt,
+    carregarDeArquivo,
+    salvarEmArquivo,
+    atualizarListaEspera,
+    validarRemocaoUsuario,
+    editarUsuario,
+    removerUsuario,
+    validarEmail,
+    validarMatricula,
+    editarLivro,
+    listarLivros,
+    removerLivro
 ) where
 import Tipos
 import Exemplos
