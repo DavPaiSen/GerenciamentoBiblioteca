@@ -19,12 +19,16 @@ module Funcoes (
     registrarDevolucao,
     listarLivrosEmprestados,
     listarUsuariosComAtraso,
-    listarListaEsperaPorLivro
+    listarListaEsperaPorLivro,
+    salvarUsuarios,
+    carregarUsuarios
 ) where
 import Tipos
 import Exemplos
 import Data.List (splitAt,find, elem, delete)
 import Data.Maybe (isJust, fromMaybe)
+import System.Directory (doesFileExist)
+import Data.Time (Day, utctDay, getCurrentTime, addDays, diffDays)
 
 recursaoGenerica :: (Livro -> Bool) -> [Livro] -> [Livro]
 recursaoGenerica _ [] = []
@@ -136,11 +140,17 @@ atualizarListaEspera id usuarios livros =
 salvarEmArquivo :: FilePath -> [Livro] -> IO ()
 salvarEmArquivo caminho livros = writeFile caminho (show livros)
 
---le um arquivo txt e devolve uma lista de livros
+--carrega arquivo livro.txt e se n existir o arquivo ele cria um
 carregarDeArquivo :: FilePath -> IO [Livro]
 carregarDeArquivo caminho = do
-    conteudo <- readFile caminho
-    return (read conteudo :: [Livro])
+    existe <- doesFileExist caminho
+    if not existe
+       then do
+           writeFile caminho "[]"  -- arquivo vazio com lista vazia
+           return []
+       else do
+           conteudo <- readFile caminho
+           return (read conteudo :: [Livro])
 
 -- Constante para prazo de empréstimo
 prazoEmprestimoDias :: Integer
@@ -188,7 +198,7 @@ registrarEmprestimo idLivroEmpr matUsuario livros usuarios = do
                             return (novosLivros, novosUsuarios)
                         else do -- Livro indisponível -> Lista de espera
                             putStrLn $ "Livro '" ++ titulo livro ++ "' indisponível."
-                            if matUsuario `elem` listaDeEspera livro
+                            if any (\u -> matricula u == matUsuario) (listaDeEspera livro)
                             then do
                                 putStrLn "Usuário já está na lista de espera."
                                 return (livros, usuarios)
@@ -196,14 +206,16 @@ registrarEmprestimo idLivroEmpr matUsuario livros usuarios = do
                                 putStr "Deseja entrar na lista de espera? (S/N): "
                                 resposta <- getLine
                                 if resposta `elem` ["S", "s"]
-                                then do
-                                    let livroComEspera = livro { listaDeEspera = listaDeEspera livro ++ [matUsuario] }
-                                        novosLivros = updateLivro livroComEspera livros
-                                    putStrLn "Usuário adicionado à lista de espera."
-                                    return (novosLivros, usuarios)
-                                else do
-                                    putStrLn "Usuário não adicionado à lista de espera."
-                                    return (livros, usuarios)
+                                   then case findUsuario matUsuario usuarios of
+                                        Just usuarioEncontrado -> do
+                                            let livroComEspera = livro { listaDeEspera = listaDeEspera livro ++ [usuarioEncontrado] }
+                                                novosLivros = updateLivro livroComEspera livros
+                                            putStrLn "Usuário adicionado à lista de espera."
+                                            return (novosLivros, usuarios)
+                                   else do
+                                       putStrLn "Usuário não adicionado à lista de espera."
+                                       return (livros, usuarios)
+
 
 {-
 Processa a devolução de um livro por um usuário.
@@ -244,11 +256,11 @@ registrarDevolucao idLivroDev matUsuarioDevolvendo livros usuarios = do
                                 return (livrosFinais, usuariosTemp)
 
                             (matProximo : restoFila) -> do -- fila
-                                putStrLn $ "Usuário " ++ matProximo ++ " é o próximo da lista de espera."
-                                case findUsuario matProximo usuariosTemp of
+                                putStrLn $ "Usuário " ++ matricula matProximo ++ " é o próximo da lista de espera."
+                                case findUsuario (matricula matProximo) usuariosTemp of
                                     Nothing -> do
                                         -- usuário na fila não existe
-                                        putStrLn $ "Erro: Usuário da fila " ++ matProximo ++ " não encontrado. Removendo da fila."
+                                        putStrLn $ "Erro: Usuário da fila " ++ matricula matProximo ++ " não encontrado. Removendo da fila."
                                         let livroFilaCorrigida = livroDevolvido { listaDeEspera = restoFila, nDisponiveis = nDisponiveis livroDevolvido + 1 }
                                         let livrosFinais = updateLivro livroFilaCorrigida livros
                                         return (livrosFinais, usuariosTemp)
@@ -261,7 +273,7 @@ registrarDevolucao idLivroDev matUsuarioDevolvendo livros usuarios = do
                                         --adicionar livro emprestado
                                         let usuarioProximoComLivro = usuarioProximo { livrosEmprestados = (idLivroDev, novaDataDevolucao) : livrosEmprestados usuarioProximo }
                                             usuariosFinais = updateUsuario usuarioProximoComLivro usuariosTemp
-                                        putStrLn $ "Livro emprestado automaticamente para " ++ matProximo ++ "."
+                                        putStrLn $ "Livro emprestado automaticamente para " ++ matricula matProximo ++ "."
                                         putStrLn $ "Devolver até: " ++ show novaDataDevolucao
                                         return (livrosTemp, usuariosFinais)
 
@@ -326,4 +338,36 @@ listarListaEsperaPorLivro livros = do
         imprimirLista livro = do
             putStrLn $ "Livro: '" ++ titulo livro ++ "' (ID: " ++ show (idLivro livro) ++ ")"
             putStrLn "  Usuários na fila (Matrícula):"
-            mapM_ (\mat -> putStrLn $ "  - " ++ mat) (listaDeEspera livro)
+            mapM_ (\u -> putStrLn $ "  - " ++ matricula u) (listaDeEspera livro)
+
+-- salva a lista de usuários em um arquivo no caminho dado
+salvarUsuarios :: FilePath -> [Usuario] -> IO ()
+salvarUsuarios caminho usuarios = writeFile caminho (show usuarios)
+
+-- lê um arquivo e devolve uma lista de usuários
+carregarUsuarios :: FilePath -> IO [Usuario]
+carregarUsuarios caminho = do
+    existe <- doesFileExist caminho
+    if existe
+          then do
+             conteudo <- readFile caminho
+             return (read conteudo :: [Usuario])
+          else do
+              putStrLn $ "Arquivo " ++ caminho ++ " não encontrado. Inicializando com lista vazia."
+              return []
+
+-- Procura um livro pelo ID
+findLivro :: Int -> [Livro] -> Maybe Livro
+findLivro id = find (\livro -> idLivro livro == id)
+
+-- Procura um usuário pela matrícula
+findUsuario :: String -> [Usuario] -> Maybe Usuario
+findUsuario mat = find (\usuario -> matricula usuario == mat)
+
+-- Atualiza um livro na lista (substitui pelo ID)
+updateLivro :: Livro -> [Livro] -> [Livro]
+updateLivro livroAtualizado = map (\livro -> if idLivro livro == idLivro livroAtualizado then livroAtualizado else livro)
+
+-- Atualiza um usuário na lista (substitui pela matrícula)
+updateUsuario :: Usuario -> [Usuario] -> [Usuario]
+updateUsuario usuarioAtualizado = map (\usuario -> if matricula usuario == matricula usuarioAtualizado then usuarioAtualizado else usuario)
