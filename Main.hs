@@ -21,7 +21,7 @@ lerInt s = do
     case stringPraInt entrada of
         Just num -> return num
         Nothing -> do
-            putStrLn "Fudeu!"
+            putStrLn "Entrada inválida!"
             lerInt s
 
 criaLivro :: [Livro] -> IO Livro
