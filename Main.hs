@@ -101,11 +101,50 @@ menuPrincipal livros usuarios = do
         "3" -> submenuEmprestimoDevolucao livros usuarios
         "4" -> submenuRelatorios livros usuarios
         "5" -> do
-            putStrLn "Função para editar livro ainda não implementada."
-            menuPrincipal livros usuarios
+            putStrLn "Digite o id do livro:"
+            idLivroStr <- getLine
+            case reads idLivroStr :: [(Int, String)] of
+                 [(idLivro, "")] -> do
+                     putStrLn "Digite o novo nome do livro:"
+                     novoNomeL <- getLine
+                     putStrLn "Digite o novo autor do livro:"
+                     novoAut <- getLine
+                     putStrLn "Digite a nova data de lançamento do livro:"
+                     dataLan <- getLine
+                     putStrLn "Digite o novo total de livros:"
+                     totalStr <- getLine
+                     case (reads dataLan :: [(Int, String)], reads totalStr :: [(Int, String)]) of
+                          ([(anoNovo, "")], [(total, "")]) -> do
+                              let atualizar l = l { nTotal = total, titulo = novoNomeL, autor = novoAut, ano = anoNovo }
+                              case editarLivro idLivro atualizar livros of
+                                   Left err -> do
+                                       putStrLn err
+                                       menuPrincipal livros usuarios
+                                   Right livrosAtualizados -> do
+                                       putStrLn "Livro atualizado com sucesso!"
+                                       menuPrincipal livrosAtualizados usuarios
+                          _ -> do
+                                               putStrLn "Erro: o total deve ser um número inteiro."
+                                               menuPrincipal livros usuarios
+                 _ -> do
+                                                   putStrLn "Erro: o ID deve ser um número inteiro."
+                                                   menuPrincipal livros usuarios
+
         "6" -> do
-            putStrLn "Função para editar usuário ainda não implementada."
-            menuPrincipal livros usuarios
+            putStrLn "Digite a matrícula do usuário"
+            mat <- getLine
+            putStrLn "Digite o novo nome:"
+            novonome <- getLine
+            putStrLn "Digite o novo email:"
+            novoemail <- getLine
+            let atualizar u = u { nome = novonome, email = novoemail }
+            case editarUsuario mat atualizar usuarios of
+                Left err -> do
+                    putStrLn err
+                    menuPrincipal livros usuarios
+                Right usuariosAtualizados -> do
+                    putStrLn "Usuário atualizado com sucesso!"
+                    menuPrincipal livros usuariosAtualizados
         "7" -> do
             putStrLn "Salvando dados e saindo..."
             salvarEmArquivo "livros.txt" livros
