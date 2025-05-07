@@ -74,7 +74,6 @@ tratarErro resultado ação =
         Left err -> putStrLn $ "Erro: " ++ err
         Right val -> ação val
 
-
 -- Menu principal
 menuPrincipal :: [Livro] -> [Usuario] -> IO ()
 menuPrincipal livros usuarios = do
@@ -97,10 +96,16 @@ menuPrincipal livros usuarios = do
             menuPrincipal livrosAtualizados usuarios
         "2" -> do
             resultado <- adicionarUsuario usuarios
-            tratarErro resultado (\usuariosAtualizados -> menuPrincipal livros usuariosAtualizados)
+            case resultado of
+                Left erro -> do
+                    putStrLn ("Erro: " ++ erro)
+                    menuPrincipal livros usuarios  -- volta para o menu com os dados atuais
+                Right usuariosAtualizados ->
+                    menuPrincipal livros usuariosAtualizados
         "3" -> submenuEmprestimoDevolucao livros usuarios
         "4" -> submenuRelatorios livros usuarios
         "5" -> do
+            putStrLn (unlines (listarLivros livros))
             putStrLn "Digite o id do livro:"
             idLivroStr <- getLine
             case reads idLivroStr :: [(Int, String)] of
@@ -131,6 +136,7 @@ menuPrincipal livros usuarios = do
                                                    menuPrincipal livros usuarios
 
         "6" -> do
+            putStrLn (unlines (listarUsuarios usuarios))
             putStrLn "Digite a matrícula do usuário"
             mat <- getLine
             putStrLn "Digite o novo nome:"
@@ -152,6 +158,7 @@ menuPrincipal livros usuarios = do
         _ -> do
             putStrLn "Opção inválida! Tente novamente."
             menuPrincipal livros usuarios
+
 
 -- Submenu de Empréstimo e Devolução
 submenuEmprestimoDevolucao :: [Livro] -> [Usuario] -> IO ()
