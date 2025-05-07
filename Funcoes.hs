@@ -21,7 +21,8 @@ module Funcoes (
     listarUsuariosComAtraso,
     listarListaEsperaPorLivro,
     salvarUsuarios,
-    carregarUsuarios
+    carregarUsuarios,
+    listarUsuarios
 ) where
 import Tipos
 import Exemplos
@@ -79,6 +80,11 @@ removerLivro id (x:xs)                                      --mudei o nome da va
                     Right rest -> Right (x:rest)
                     Left err -> Left err
 
+listarUsuarios :: [Usuario] -> [String]
+listarUsuarios = map formatarUsuario
+    where
+        formatarUsuario u = "Nome: " ++ nome u
+            ++ " | Matricula: " ++ matricula u
 
 -- função para formatação dos dados
 listarLivros :: [Livro] -> [String]
