@@ -139,7 +139,7 @@ validarRemocaoUsuario usuario
 atualizarListaEspera :: Int -> [Usuario] -> [Livro] -> [Livro]
 atualizarListaEspera id usuarios livros = 
     map (\livro -> if idLivro livro == id 
-                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } 
                    else livro) livros
 
 --salva a lista de livros em um txt no caminho dado
