@@ -74,7 +74,7 @@ novoId listaLivros =
 -- função que remove livros filtrando por id
 removerLivro :: Int -> [Livro] -> Either String [Livro]
 removerLivro id [] = Left "Livro não encontrado"
-removerLivro id (x:xs)                                      --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+removerLivro id (x:xs)                                     
     | id == idLivro x = Right xs
     | otherwise = case removerLivro id xs of
                     Right rest -> Right (x:rest)
@@ -97,7 +97,7 @@ listarLivros = map formatarLivro
 -- edita um livro usando splitAt para localizar o elemento
 editarLivro :: Int -> (Livro -> Livro) -> [Livro] -> Either String [Livro]
 editarLivro id f livros = 
-    case break (\l -> idLivro l == id) livros of                            --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+    case break (\l -> idLivro l == id) livros of                            
         (_, []) -> Left "Livro não encontrado"
         (prefix, (x:xs)) -> Right (prefix ++ [f x] ++ xs)
 
