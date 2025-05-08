@@ -153,8 +153,9 @@ menuPrincipal livros usuarios = do
                     menuPrincipal livros usuariosAtualizados
         "7" -> do
             putStrLn "Salvando dados e saindo..."
-            salvarEmArquivo "livros.txt" livros
+            salvarBiblioteca "biblioteca.txt" livros
             salvarUsuarios "usuarios.txt" usuarios
+            putStrLn "Até a próxima!"
         _ -> do
             putStrLn "Opção inválida! Tente novamente."
             menuPrincipal livros usuarios
@@ -215,10 +216,10 @@ submenuRelatorios livros usuarios = do
         _ -> do
             putStrLn "Opção inválida! Tente novamente."
             submenuRelatorios livros usuarios
-
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    livros <- carregarDeArquivo "livros.txt"
+    livros <- carregarDeArquivo "biblioteca.txt"
     usuarios <- carregarUsuarios "usuarios.txt"
     menuPrincipal livros usuarios
+
