@@ -99,7 +99,7 @@ listarLivros = map formatarLivro
 -- edita um livro usando splitAt para localizar o elemento
 editarLivro :: Int -> (Livro -> Livro) -> [Livro] -> Either String [Livro]
 editarLivro id f livros = 
-    case break (\l -> idLivro l == id) livros of                            --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+    case break (\l -> idLivro l == id) livros of 
         (_, []) -> Left "Livro não encontrado"
         (prefix, (x:xs)) -> Right (prefix ++ [f x] ++ xs)
 
@@ -141,7 +141,7 @@ validarRemocaoUsuario usuario
 atualizarListaEspera :: Int -> [Usuario] -> [Livro] -> [Livro]
 atualizarListaEspera id usuarios livros = 
     map (\livro -> if idLivro livro == id 
-                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } 
                    else livro) livros
 
 --salva a lista de livros em um txt no caminho dado
