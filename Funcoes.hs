@@ -76,7 +76,7 @@ novoId listaLivros =
 -- função que remove livros filtrando por id
 removerLivro :: Int -> [Livro] -> Either String [Livro]
 removerLivro id [] = Left "Livro não encontrado"
-removerLivro id (x:xs)                                      --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
+removerLivro id (x:xs)
     | id == idLivro x = Right xs
     | otherwise = case removerLivro id xs of
                     Right rest -> Right (x:rest)
