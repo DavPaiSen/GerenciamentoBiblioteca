@@ -22,7 +22,8 @@ module Funcoes (
     listarListaEsperaPorLivro,
     salvarUsuarios,
     carregarUsuarios,
-    listarUsuarios
+    listarUsuarios,
+    salvarBiblioteca
 ) where
 import Tipos
 import Exemplos
@@ -30,6 +31,7 @@ import Data.List (splitAt,find, elem, delete)
 import Data.Maybe (isJust, fromMaybe)
 import System.Directory (doesFileExist)
 import Data.Time (Day, utctDay, getCurrentTime, addDays, diffDays)
+
 
 recursaoGenerica :: (Livro -> Bool) -> [Livro] -> [Livro]
 recursaoGenerica _ [] = []
@@ -40,7 +42,7 @@ recursaoGenerica condicao (x:xs)
 --conversao de string pra int, retorna Nothing se nao conseguir
 stringPraInt :: String -> Maybe Int
 stringPraInt s
-    |and $ map (\d -> d >= '9' && d >= '0') s = Nothing
+    | not (all (\d -> d >= '0' && d <= '9') s) = Nothing
     |otherwise = Just $ stringPraInt' s 0
         where
             stringPraInt' :: String -> Int -> Int
@@ -74,7 +76,7 @@ novoId listaLivros =
 -- função que remove livros filtrando por id
 removerLivro :: Int -> [Livro] -> Either String [Livro]
 removerLivro id [] = Left "Livro não encontrado"
-removerLivro id (x:xs)                                     
+removerLivro id (x:xs)                                      --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
     | id == idLivro x = Right xs
     | otherwise = case removerLivro id xs of
                     Right rest -> Right (x:rest)
@@ -97,7 +99,7 @@ listarLivros = map formatarLivro
 -- edita um livro usando splitAt para localizar o elemento
 editarLivro :: Int -> (Livro -> Livro) -> [Livro] -> Either String [Livro]
 editarLivro id f livros = 
-    case break (\l -> idLivro l == id) livros of                            
+    case break (\l -> idLivro l == id) livros of                            --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
         (_, []) -> Left "Livro não encontrado"
         (prefix, (x:xs)) -> Right (prefix ++ [f x] ++ xs)
 
@@ -139,24 +141,58 @@ validarRemocaoUsuario usuario
 atualizarListaEspera :: Int -> [Usuario] -> [Livro] -> [Livro]
 atualizarListaEspera id usuarios livros = 
     map (\livro -> if idLivro livro == id 
-                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } 
+                   then livro { listaDeEspera = filter (`elem` usuarios) (listaDeEspera livro) } --mudei o nome da variavel de entrada, a funcao nao entendia o que que era dois idLivro ao mesmo tempo
                    else livro) livros
 
 --salva a lista de livros em um txt no caminho dado
 salvarEmArquivo :: FilePath -> [Livro] -> IO ()
 salvarEmArquivo caminho livros = writeFile caminho (show livros)
+-- Função para salvar os dados da biblioteca e dos usuários no arquivo
+salvarBiblioteca :: FilePath -> [Livro] -> IO ()
+salvarBiblioteca caminho livros = do
+    existe <- doesFileExist caminho
+    if existe
+       then do
+           putStrLn $ "Arquivo " ++ caminho ++ " já existe. Deseja sobrescrevê-lo? (S/N)"
+           resposta <- getLine
+           if resposta == "S" || resposta == "s" then do
+               writeFile caminho (show livros)  -- Sobrescreve o arquivo com os livros atuais
+               putStrLn "Biblioteca salva com sucesso!"
+           else
+               putStrLn "Até a próxima!"
+           else do
+               putStrLn $ "O arquivo " ++ caminho ++ " não existe. Deseja criar um novo? (S/N)"
+               resposta <- getLine
+               if resposta == "S" || resposta == "s" then do
+                   writeFile caminho (show livros)  -- Cria o arquivo e escreve os livros
+                   putStrLn "Biblioteca criada e salva com sucesso!"
+               else
+                   putStrLn "Até a próxima!"
 
---carrega arquivo livro.txt e se n existir o arquivo ele cria um
+-- Função para carregar ou criar o arquivo de livros
 carregarDeArquivo :: FilePath -> IO [Livro]
 carregarDeArquivo caminho = do
     existe <- doesFileExist caminho
     if not existe
        then do
-           writeFile caminho "[]"  -- arquivo vazio com lista vazia
-           return []
+           -- Se o arquivo não existir, cria um arquivo com uma lista vazia
+           writeFile caminho "[]"
+           return []  -- Retorna uma lista vazia
        else do
+           -- Tenta ler o arquivo, e captura possíveis erros de leitura
            conteudo <- readFile caminho
-           return (read conteudo :: [Livro])
+           case safeRead conteudo of
+               Just livros -> return livros  -- Se a leitura foi bem-sucedida, retorna os livros
+               Nothing -> do
+                   -- Se houver erro na leitura (formato inválido), cria um arquivo novo com uma lista vazia
+                   writeFile caminho "[]"
+                   return []
+
+-- Função auxiliar para tentar ler o conteúdo de forma segura
+safeRead :: String -> Maybe [Livro]
+safeRead str = case reads str of
+    [(x, "")] -> Just x   -- Se a leitura for bem-sucedida, retorna o valor
+    _         -> Nothing  -- Caso contrário, retorna Nothing
 
 -- Constante para prazo de empréstimo
 prazoEmprestimoDias :: Integer
@@ -346,9 +382,10 @@ listarListaEsperaPorLivro livros = do
             putStrLn "  Usuários na fila (Matrícula):"
             mapM_ (\u -> putStrLn $ "  - " ++ matricula u) (listaDeEspera livro)
 
--- salva a lista de usuários em um arquivo no caminho dado
 salvarUsuarios :: FilePath -> [Usuario] -> IO ()
-salvarUsuarios caminho usuarios = writeFile caminho (show usuarios)
+salvarUsuarios caminho usuarios = do
+    writeFile caminho (show usuarios)
+    putStrLn "Usuários salvos com sucesso!"
 
 -- lê um arquivo e devolve uma lista de usuários
 carregarUsuarios :: FilePath -> IO [Usuario]
